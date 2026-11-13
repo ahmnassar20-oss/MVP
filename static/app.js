@@ -490,7 +490,7 @@ async function Performance(v, q) {
       <div class="card kpi"><div class="v blue">${kmh(M.avg_speed_kmh)} كم/س</div><div class="l">متوسط السرعة</div></div>
       <div class="card kpi"><div class="v amber">${kmh(M.max_speed_kmh)} كم/س</div><div class="l">أعلى سرعة</div></div>
       <div class="card kpi"><div class="v">${M.sprints}</div><div class="l">سبرنتات (+25 كم/س لثانية فأكثر)</div></div>
-      ${EV ? `<div class="card kpi"><div class="v">${EV.touches}</div><div class="l">استحواذات/لمسات</div></div><div class="card kpi"><div class="v">${EV.passes} / ${EV.received}</div><div class="l">تمريرات / استلام</div></div><div class="card kpi"><div class="v">${EV.lost}</div><div class="l">كرات ضايعة</div></div>` : ""}
+      ${EV ? `<div class="card kpi"><div class="v">${EV.touches}</div><div class="l">استحواذات/لمسات</div></div><div class="card kpi"><div class="v">${EV.passes} / ${EV.received}</div><div class="l">تمريرات / استلام</div></div><div class="card kpi"><div class="v">${EV.interceptions ?? 0}</div><div class="l">اعتراضات الكرة</div></div><div class="card kpi"><div class="v">${EV.lost}</div><div class="l">كرات ضايعة</div></div>` : ""}
     </div>` : `<div class="note" style="margin-top:16px">المسافة والسرعة والـ Heatmap بالمتر محتاجة <b>معايرة الملعب</b> — اضغط الزر فوق وحدد الأركان الأربعة (دقيقة واحدة لكل فيديو).</div>`}
     <div class="grid g2" style="margin-top:16px">
       <div class="card"><h3>Heatmap ${M ? "(على الملعب بالمتر)" : "(على إطار الفيديو)"}</h3><div id="heatBox"></div></div>
@@ -602,7 +602,7 @@ async function Analysis(v, q) {
       <div class="card"><h3>شكل الفريقين (متوسط المراكز بالمتر)</h3><div id="shapeBox"></div></div>
       <div class="card"><h3>الاستحواذ والأحداث</h3>
         ${poss && an.teams ? `<div style="margin-bottom:10px">${[0, 1].map((l) => `<div class="row c" style="margin:6px 0"><span style="width:110px">${tl(l)}</span><div class="bar" style="flex:1"><i style="width:${poss[l] || 0}%"></i></div><b>${poss[l] ?? 0}%</b></div>`).join("")}</div>` : '<div class="muted small">الاستحواذ غير متاح (الكرة أو تقسيم الفرق ناقص).</div>'}
-        ${an.teams ? `<div class="table-wrap"><table><tr><th>الفريق</th><th>تمريرات</th><th>كرات ضايعة</th><th>تسديدات</th></tr>${[0, 1].map((l) => `<tr><td>${tl(l)}</td><td>${E.passes.filter((e) => e.team === l).length}</td><td>${E.turnovers.filter((e) => e.team === l).length}</td><td>${E.shots.filter((e) => e.team === l).length}</td></tr>`).join("")}</table></div>` : ""}
+        ${an.teams ? `<div class="table-wrap"><table><tr><th>الفريق</th><th>تمريرات</th><th>اعتراضات</th><th>تسديدات</th></tr>${[0, 1].map((l) => `<tr><td>${tl(l)}</td><td>${E.passes.filter((e) => e.team === l).length}</td><td>${E.turnovers.filter((e) => e.team !== l && e.team !== undefined && e.team !== null).length}</td><td>${E.shots.filter((e) => e.team === l).length}</td></tr>`).join("")}</table></div>` : ""}
         ${E.shots.length ? `<h3 style="margin-top:14px">التسديدات</h3>${E.shots.map((sh) => `<div class="feature-row"><span>${fmtDur(sh.time)} — ${sh.player != null ? esc(trackLabel(job, sh.player)) : "غير معروف"}</span><span class="muted">${sh.speed_kmh} كم/س</span></div>`).join("")}` : ""}
         <p class="muted small">الأحداث بتتحسب بالاعتماد على قرب الكرة من اللاعب (أقل من 2م) واتجاه وسرعة الكرة — دقتها بتعتمد بشدة على جودة اكتشاف الكرة.</p></div>
     </div>
@@ -653,7 +653,7 @@ async function Reports(v, q) {
   async function draw() {
     const m = done.find((x) => x.job_id === job), s = await getSummary(job);
     let an = null; try { an = await getAnalysis(job); } catch { /* ignore */ }
-    const MM = an?.metrics || {};
+    const MM = an?.metrics || {}, PP = an?.events?.per_player || {};
     const list = s.players.filter((p) => p.seconds_visible >= 3);
     v.innerHTML = `
     <div class="card no-print"><div class="row">${matchSelect(matches, job)}<button class="btn" id="printBtn">🖨️ طباعة / حفظ PDF</button><button class="btn sec" id="csvBtn">⬇️ CSV</button></div></div>
@@ -661,15 +661,17 @@ async function Reports(v, q) {
       <h2 style="margin-top:0">تقرير المباراة — ${esc(m.filename || "")}</h2>
       <p>${fmtDate(m.created_at)} · المدة ${fmtDur(s.duration_seconds)} · ${s.players.length} Track</p>
       <h3>ملخص الظهور</h3>
-      <table><tr><th>اللاعب / Track</th><th>الفريق</th><th>زمن الظهور</th><th>أول ظهور</th><th>آخر ظهور</th><th>الثقة</th>${an?.calibrated ? "<th>المسافة (م)</th><th>أعلى سرعة (كم/س)</th>" : ""}</tr>
-      ${list.map((p) => { const pl = mapped(job, p.track_id); return `<tr><td>${esc(trackLabel(job, p.track_id))}</td><td>${esc((pl && teamOf(pl.teamId)?.name) || "—")}</td><td>${fmtDur(p.seconds_visible)}</td><td>${fmtDur(p.first_seen_seconds)}</td><td>${fmtDur(p.last_seen_seconds)}</td><td>${(p.avg_confidence * 100).toFixed(0)}%</td>${an?.calibrated ? `<td>${MM[p.track_id] ? Math.round(MM[p.track_id].distance_m) : "—"}</td><td>${MM[p.track_id] ? MM[p.track_id].max_speed_kmh : "—"}</td>` : ""}</tr>`; }).join("")}</table>
+      <table><tr><th>اللاعب / Track</th><th>الفريق</th><th>زمن الظهور</th><th>أول ظهور</th><th>آخر ظهور</th><th>الثقة</th>${an?.calibrated ? "<th>المسافة (م)</th><th>أعلى سرعة (كم/س)</th><th>تمريرات</th><th>اعتراضات</th><th>كرات ضايعة</th>" : ""}</tr>
+      ${list.map((p) => { const pl = mapped(job, p.track_id); return `<tr><td>${esc(trackLabel(job, p.track_id))}</td><td>${esc((pl && teamOf(pl.teamId)?.name) || "—")}</td><td>${fmtDur(p.seconds_visible)}</td><td>${fmtDur(p.first_seen_seconds)}</td><td>${fmtDur(p.last_seen_seconds)}</td><td>${(p.avg_confidence * 100).toFixed(0)}%</td>${an?.calibrated ? `<td>${MM[p.track_id] ? Math.round(MM[p.track_id].distance_m) : "—"}</td><td><b>${MM[p.track_id] ? MM[p.track_id].max_speed_kmh : "—"}</b></td><td><b>${PP[p.track_id]?.passes ?? 0}</b></td><td><b>${PP[p.track_id]?.interceptions ?? 0}</b></td><td>${PP[p.track_id]?.lost ?? 0}</td>` : ""}</tr>`; }).join("")}</table>
+      ${an?.calibrated && !an.events?.ball_coverage_pct ? '<p style="color:#b45309;font-size:13px">⚠ الكرة لم تُكتشف في الفيديو — التمريرات والاعتراضات = 0 بسبب غياب بيانات الكرة، مش لأن اللاعب مأداش.</p>' : ""}
+      ${an?.calibrated && an.events?.warning ? `<p style="color:#b45309;font-size:13px">⚠ ${esc(an.events.warning)}</p>` : ""}
       <p style="color:#666;font-size:12px;margin-top:20px">ملاحظة: الـ Tracks تشمل أي شخص مكتشف (لاعبين وحكّام). المسافة والسرعة تظهر فقط بعد معايرة الملعب، وكلها أرقام تقديرية.</p>
     </div>`;
     $("#matchSel").onchange = (e) => { job = e.target.value; draw(); };
     $("#printBtn").onclick = () => window.print();
     $("#csvBtn").onclick = () => {
-      const rows = [["track_id", "player", "team", "seconds_visible", "first_seen_s", "last_seen_s", "avg_confidence", "distance_m", "avg_speed_kmh", "max_speed_kmh", "sprints"]]
-        .concat(s.players.map((p) => { const pl = mapped(job, p.track_id), x = MM[p.track_id] || {}; return [p.track_id, pl ? playerLabel(pl) : "", (pl && teamOf(pl.teamId)?.name) || "", p.seconds_visible, p.first_seen_seconds, p.last_seen_seconds, p.avg_confidence, x.distance_m ?? "", x.avg_speed_kmh ?? "", x.max_speed_kmh ?? "", x.sprints ?? ""]; }));
+      const rows = [["track_id", "player", "team", "seconds_visible", "first_seen_s", "last_seen_s", "avg_confidence", "distance_m", "avg_speed_kmh", "max_speed_kmh", "sprints", "passes", "interceptions", "lost_balls"]]
+        .concat(s.players.map((p) => { const pl = mapped(job, p.track_id), x = MM[p.track_id] || {}; return [p.track_id, pl ? playerLabel(pl) : "", (pl && teamOf(pl.teamId)?.name) || "", p.seconds_visible, p.first_seen_seconds, p.last_seen_seconds, p.avg_confidence, x.distance_m ?? "", x.avg_speed_kmh ?? "", x.max_speed_kmh ?? "", x.sprints ?? "", PP[p.track_id]?.passes ?? "", PP[p.track_id]?.interceptions ?? "", PP[p.track_id]?.lost ?? ""]; }));
       const csv = "﻿" + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `report_${job.slice(0, 8)}.csv`; a.click();
     };

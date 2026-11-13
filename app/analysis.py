@@ -15,6 +15,7 @@ from scipy.optimize import linear_sum_assignment
 
 PITCH_PRESETS = {"5": (40.0, 20.0), "7": (60.0, 40.0), "11": (105.0, 68.0)}
 HEAT_GRID = (21, 14)          # cells along length / width (in meters space)
+ANALYSIS_VERSION = 2  # bump when the output format changes (invalidates cached analysis)
 MIN_TRACK_SECONDS = 3.0
 SPRINT_MS = 25 / 3.6          # 25 km/h
 MAX_HUMAN_MS = 12.0
@@ -239,7 +240,7 @@ def compute_events(data: dict, H: np.ndarray, rows: np.ndarray, labels: dict, L:
             merged.append(dict(s))
     segs = merged
 
-    per: dict[int, dict[str, int]] = defaultdict(lambda: {"touches": 0, "passes": 0, "received": 0, "lost": 0})
+    per: dict[int, dict[str, int]] = defaultdict(lambda: {"touches": 0, "passes": 0, "received": 0, "lost": 0, "interceptions": 0})
     for s in segs:
         per[s["tid"]]["touches"] += 1
 
@@ -272,6 +273,7 @@ def compute_events(data: dict, H: np.ndarray, rows: np.ndarray, labels: dict, L:
         else:
             res["turnovers"].append(ev)
             per[a["tid"]]["lost"] += 1
+            per[b["tid"]]["interceptions"] += 1  # b won the ball from an opponent
 
     # shots: fast ball heading to a goal line
     if len(bf) > 5:
@@ -359,6 +361,7 @@ def analyze(data: dict, calibration: Optional[dict]) -> dict:
     teams = cluster_teams(data)
     labels = teams["labels"] if teams else {}
     out: dict[str, Any] = {
+        "version": ANALYSIS_VERSION,
         "calibrated": bool(calibration), "calibration": calibration,
         "teams": teams, "metrics": None, "events": None, "pitch": None, "warnings": [],
     }

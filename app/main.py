@@ -340,7 +340,9 @@ def get_analysis(job_id: str):
     _require_completed(job_id)
     cache = _analysis_path(job_id)
     if cache.exists():
-        return FileResponse(cache, media_type="application/json")
+        cached = json.loads(cache.read_text(encoding="utf-8"))
+        if cached.get("version") == analysis.ANALYSIS_VERSION:
+            return cached
     cal = None
     if _calib_path(job_id).exists():
         cal = json.loads(_calib_path(job_id).read_text(encoding="utf-8"))
@@ -360,8 +362,6 @@ class FitRequest(BaseModel):
 @app.post("/matches/{job_id}/fit")
 def fit_to_formation(job_id: str, req: FitRequest):
     result = get_analysis(job_id)
-    if isinstance(result, FileResponse):
-        result = json.loads(_analysis_path(job_id).read_text(encoding="utf-8"))
     if not result.get("metrics") or not result.get("teams"):
         raise HTTPException(status_code=409, detail="Needs pitch calibration and team detection first.")
     labels = {int(k): v for k, v in result["teams"]["labels"].items()}
