@@ -1,7 +1,4 @@
-"""Optional jersey-number reading with EasyOCR (not installed by default).
-
-pip install easyocr   (downloads PyTorch models; slow on CPU)
-Accuracy on small, blurry, far-away players is limited, so results are suggestions
+"""Jersey-number reading with EasyOCR (installed via requirements.txt / Install_OCR.bat).
 that the coach confirms in the UI.
 """
 from collections import defaultdict

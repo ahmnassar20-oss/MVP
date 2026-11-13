@@ -32,7 +32,7 @@ Teams, players, formations and Track→player mappings are stored in the browser
 ## New in this version
 - **Pitch calibration** (Performance or Tactical Analysis page): click the 4 pitch corners on the first frame -> player coordinates in meters, distance, speed, sprints, meter heatmaps.
 - **Teams** split automatically by shirt colour; **ball** detection; **possession / passes / shots** (heuristics, experimental); **formation-fit** score against Tactical Builder formations.
-- **Jersey OCR** is optional: `.venv\Scripts\pip install easyocr`, then Players -> "قراءة أرقام التيشيرتات".
+- **Jersey OCR**: installed by `Setup_Football_Analyzer.bat`. If you set up before this version, double-click `Install_OCR.bat` once, then use Players -> "قراءة أرقام التيشيرتات".
 - Videos processed with v0.1 have no colour/ball data: re-upload them to get teams and events.
 - Better ball detection: change `MODEL_NAME` in `app/video_processor.py` to `yolo11m.pt` (slower, more accurate).
 
