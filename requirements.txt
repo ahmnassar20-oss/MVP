@@ -5,4 +5,4 @@ opencv-python>=4.10
 python-multipart>=0.0.9
 numpy>=1.26
 scipy>=1.11
-# optional, for jersey-number OCR: easyocr
+easyocr>=1.7  # jersey-number OCR (large download; ultralytics already brings PyTorch)

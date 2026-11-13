@@ -13,7 +13,7 @@ def read_jerseys(video_path: Path, data: dict, max_crops: int = 8, min_seconds: 
     try:
         import easyocr
     except ImportError as exc:  # pragma: no cover
-        raise RuntimeError("EasyOCR غير مثبت. شغّل: .venv\\Scripts\\pip install easyocr") from exc
+        raise RuntimeError("EasyOCR غير مثبت. اقفل السيرفر وشغّل Install_OCR.bat (دبل كليك) ثم Start_Football_Analyzer.bat.") from exc
 
     fps = data["fps"] or 25.0
     per_track: dict[int, list] = defaultdict(list)
