@@ -6,3 +6,4 @@ uploads/*
 outputs/*
 !uploads/.gitkeep
 !outputs/.gitkeep
+*.pt
